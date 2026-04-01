@@ -1,8 +1,16 @@
 'use client'
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
+import { useAtendimentoTasks } from "@/components/atendimento-task-provider"
+import { TaskTablePersonCell } from "@/components/atendimento-task-people"
+import {
+  ATENDIMENTO_CURRENT_USER_ID,
+  atendimentoSolicitanteAvatarUrl,
+  resolveTaskAtendente,
+} from "@/lib/atendimento-users"
 import { useCreateAtendimento } from "@/components/create-atendimento-provider"
+import type { AtendimentoChatSource } from "@/lib/atendimento-constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -25,6 +33,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ptBR } from "date-fns/locale/pt-BR"
+import { toast } from "sonner"
 import {
   ArrowDownIcon,
   ArrowLeftRightIcon,
@@ -38,20 +48,49 @@ import {
   ChevronsRightIcon,
   ChevronsUpDownIcon,
   CirclePlusIcon,
-  EyeIcon,
   HandMetalIcon,
   MoreHorizontalIcon,
+  Trash2Icon,
   XCircleIcon,
 } from "lucide-react"
 
-type Task = {
+export type Task = {
   id: string
   type: "Documentation" | "Bug" | "Feature"
   title: string
+  /** Nome do solicitante (exibido com foto na lista e no chat). */
   owner: string
   status: "In Progress" | "Backlog" | "Todo" | "Canceled" | "Done"
   priority: "Low" | "Medium" | "High"
   openedAt?: string
+  /** Chamado aberto por mim (Meus chamados). */
+  createdByUserId?: "me" | "other"
+  /** Quem pegou o atendimento na fila (mock). */
+  claimedByUserId?: string | null
+}
+
+export function mergeAtendimentoTasks(
+  base: Task[],
+  overrides: Record<
+    string,
+    { claimedByUserId?: string | null; status?: Task["status"] }
+  >,
+  deletedIds: ReadonlySet<string>,
+): Task[] {
+  return base
+    .filter((t) => !deletedIds.has(t.id))
+    .map((t) => {
+      const o = overrides[t.id]
+      if (!o) return { ...t }
+      return {
+        ...t,
+        claimedByUserId:
+          o.claimedByUserId !== undefined
+            ? o.claimedByUserId
+            : t.claimedByUserId,
+        status: o.status ?? t.status,
+      }
+    })
 }
 
 export const appointmentsTasksData: Task[] = [
@@ -62,6 +101,7 @@ export const appointmentsTasksData: Task[] = [
     owner: "Ana Souza",
     status: "In Progress",
     priority: "Medium",
+    createdByUserId: "me",
   },
   {
     id: "TASK-7878",
@@ -70,6 +110,7 @@ export const appointmentsTasksData: Task[] = [
     owner: "Bruno Lima",
     status: "Backlog",
     priority: "Medium",
+    createdByUserId: "me",
   },
   {
     id: "TASK-7839",
@@ -78,6 +119,7 @@ export const appointmentsTasksData: Task[] = [
     owner: "Carla Mendes",
     status: "Todo",
     priority: "High",
+    createdByUserId: "me",
   },
   {
     id: "TASK-5562",
@@ -126,6 +168,7 @@ export const appointmentsTasksData: Task[] = [
     owner: "Isabela Ferreira",
     status: "Todo",
     priority: "Low",
+    createdByUserId: "me",
   },
   {
     id: "TASK-5160",
@@ -143,6 +186,7 @@ export const appointmentsTasksData: Task[] = [
     owner: "Karen Souza",
     status: "In Progress",
     priority: "High",
+    createdByUserId: "me",
   },
   {
     id: "TASK-9002",
@@ -783,15 +827,29 @@ const tasksTableHeadClass =
   "text-sm font-semibold tracking-tight text-[var(--tasks-table-header-fg)] normal-case"
 
 const tasksTableCol = {
-  task: "w-[9%] min-w-[5.5rem] pl-4",
-  owner: "w-[11%] min-w-[7rem]",
-  title: "min-w-0 w-[38%]",
-  status: "w-[10%] min-w-[5.5rem] pl-0",
+  task: "w-[8%] min-w-[5rem] pl-4",
+  solicitante: "w-[13%] min-w-[8.5rem]",
+  atendente: "w-[13%] min-w-[8.5rem]",
+  title: "min-w-0 w-[28%]",
+  status: "w-[9%] min-w-[5rem] pl-0",
   date: "w-[8%] min-w-[4.5rem]",
   time: "w-[7%] min-w-[4rem]",
-  priority: "w-[9%] min-w-[5rem]",
-  action: "w-[8%] min-w-[3rem] pr-4 text-right",
+  priority: "w-[8%] min-w-[4.75rem]",
+  action: "w-[6%] min-w-[2.75rem] pr-4 text-right",
 } as const
+
+function resolveChatSourceForPage(props: {
+  filaAtendimentosPage: boolean
+  meusChamadosPage: boolean
+  meusAtendimentosPage: boolean
+  historicoPage: boolean
+}): AtendimentoChatSource {
+  if (props.filaAtendimentosPage) return "fila"
+  if (props.meusChamadosPage) return "meus-chamados"
+  if (props.meusAtendimentosPage) return "meus-atendimentos"
+  if (props.historicoPage) return "historico"
+  return "default"
+}
 
 export function AppointmentsTasks({
   page = 1,
@@ -801,6 +859,7 @@ export function AppointmentsTasks({
   historicoPage = false,
   filaAtendimentosPage = false,
   meusAtendimentosPage = false,
+  meusChamadosPage = false,
 }: {
   page?: number
   pageSize?: number
@@ -809,13 +868,37 @@ export function AppointmentsTasks({
   historicoPage?: boolean
   filaAtendimentosPage?: boolean
   meusAtendimentosPage?: boolean
+  meusChamadosPage?: boolean
 }) {
   const { openCreateAtendimento } = useCreateAtendimento()
+  const {
+    openChat,
+    overrides,
+    deletedIds,
+    claimTask,
+    encerrarTask,
+    apagarTask,
+  } = useAtendimentoTasks()
+
+  const tasksData = useMemo(
+    () => mergeAtendimentoTasks(appointmentsTasksData, overrides, deletedIds),
+    [overrides, deletedIds],
+  )
+
+  const chatSource = resolveChatSourceForPage({
+    filaAtendimentosPage,
+    meusChamadosPage,
+    meusAtendimentosPage,
+    historicoPage,
+  })
 
   const [statusFilter, setStatusFilter] = useState<Array<Task["status"]>>(() => {
     if (historicoPage) return ["Canceled"]
     if (filaAtendimentosPage) {
       return ["Todo", "In Progress", "Backlog", "Canceled", "Done"]
+    }
+    if (meusChamadosPage) {
+      return ["Todo", "In Progress", "Backlog", "Canceled"]
     }
     if (showEncerradoStatusFilter) {
       return ["Todo", "In Progress", "Canceled"]
@@ -834,13 +917,29 @@ export function AppointmentsTasks({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const filteredTasks = appointmentsTasksData.filter((task) => {
+  const filteredTasks = tasksData.filter((task) => {
+    const claimedBy = task.claimedByUserId ?? null
+
     if (historicoPage) {
       if (task.status !== "Canceled") {
         return false
       }
     } else if (meusAtendimentosPage) {
-      if (task.status !== "In Progress") {
+      if (
+        claimedBy !== ATENDIMENTO_CURRENT_USER_ID ||
+        task.status !== "In Progress"
+      ) {
+        return false
+      }
+    } else if (meusChamadosPage) {
+      if (task.createdByUserId !== "me") {
+        return false
+      }
+    } else if (filaAtendimentosPage) {
+      if (task.status === "Canceled") {
+        return false
+      }
+      if (claimedBy === ATENDIMENTO_CURRENT_USER_ID) {
         return false
       }
     } else if (!filaAtendimentosPage) {
@@ -862,12 +961,13 @@ export function AppointmentsTasks({
 
     let matchesDate = true
     if (dateFilter) {
+      const taskIndex = tasksData.findIndex((t) => t.id === task.id)
       const openedAt =
         task.openedAt
           ? new Date(task.openedAt)
           : new Date(
               new Date("2026-03-01T09:00:00").getTime() +
-                appointmentsTasksData.indexOf(task) * 60 * 60 * 1000,
+                Math.max(0, taskIndex) * 60 * 60 * 1000,
             )
 
       matchesDate =
@@ -877,9 +977,11 @@ export function AppointmentsTasks({
     }
 
     const q = searchQuery.trim().toLowerCase()
+    const atendenteSearch = resolveTaskAtendente(task.claimedByUserId)?.name ?? ""
     const matchesSearch =
       q.length === 0 ||
       task.owner.toLowerCase().includes(q) ||
+      atendenteSearch.toLowerCase().includes(q) ||
       task.title.toLowerCase().includes(q) ||
       task.id.toLowerCase().includes(q)
 
@@ -907,7 +1009,7 @@ export function AppointmentsTasks({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
               filaAtendimentosPage
-                ? "Buscar por responsável, título ou ID..."
+                ? "Buscar por solicitante, atendente, título ou ID..."
                 : "Filtrar tarefas..."
             }
             className="h-8 w-full min-w-0 sm:w-72"
@@ -1025,6 +1127,89 @@ export function AppointmentsTasks({
                           >
                             <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
                               <span>Concluído</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        </>
+                      ) : meusChamadosPage ? (
+                        <>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Todo")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Todo"]
+                                  : current.filter((value) => value !== "Todo"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Aberto</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("In Progress")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "In Progress"]
+                                  : current.filter(
+                                      (value) => value !== "In Progress",
+                                    ),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Em andamento</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Backlog")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Backlog"]
+                                  : current.filter((value) => value !== "Backlog"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Pausado</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Canceled")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Canceled"]
+                                  : current.filter(
+                                      (value) => value !== "Canceled",
+                                    ),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Encerrado</span>
                               <span className="text-xs text-muted-foreground">
                                 —
                               </span>
@@ -1181,7 +1366,7 @@ export function AppointmentsTasks({
                     selected={pendingDateFilter}
                     onSelect={(date) => setPendingDateFilter(date ?? undefined)}
                     showOutsideDays
-                    locale={{ code: "pt-BR" } as any}
+                    locale={ptBR}
                     className="mx-auto bg-transparent p-0"
                   />
                   <div className="flex items-center justify-between gap-2 pt-1">
@@ -1236,8 +1421,15 @@ export function AppointmentsTasks({
                 <TableHead className={`${tasksTableCol.task} ${tasksTableHeadClass}`}>
                   Tarefa
                 </TableHead>
-                <TableHead className={`${tasksTableCol.owner} ${tasksTableHeadClass}`}>
-                  Responsável
+                <TableHead
+                  className={`${tasksTableCol.solicitante} ${tasksTableHeadClass}`}
+                >
+                  Solicitante
+                </TableHead>
+                <TableHead
+                  className={`${tasksTableCol.atendente} ${tasksTableHeadClass}`}
+                >
+                  Atendente
                 </TableHead>
                 <TableHead className={`${tasksTableCol.title} ${tasksTableHeadClass}`}>
                   Título
@@ -1273,6 +1465,8 @@ export function AppointmentsTasks({
                 : task.priority === "Medium"
                   ? "Média"
                   : "Baixa"
+            const atendente = resolveTaskAtendente(task.claimedByUserId)
+            const solicitanteAvatarUrl = atendimentoSolicitanteAvatarUrl(task.owner)
             const statusLabel =
               task.status === "Todo"
                 ? "Aberto"
@@ -1284,20 +1478,65 @@ export function AppointmentsTasks({
                       ? "Concluído"
                       : "Encerrado"
 
+            const claimedByRow = task.claimedByUserId ?? null
+            const showPegarInMenu =
+              filaAtendimentosPage &&
+              claimedByRow !== ATENDIMENTO_CURRENT_USER_ID
+            const showApagarMenu =
+              meusChamadosPage &&
+              task.createdByUserId === "me" &&
+              !claimedByRow
+            const showTransferirAlterarInMenu =
+              !meusChamadosPage && !historicoPage
+            const showEncerrarInMenu =
+              !historicoPage && task.status !== "Canceled"
+
+            const showRowActionsMenu =
+              showTransferirAlterarInMenu ||
+              showPegarInMenu ||
+              showApagarMenu ||
+              showEncerrarInMenu
+
             return (
               <TableRow
                 key={task.id}
-                className="border-border hover:bg-muted/40 dark:hover:bg-white/[0.06]"
+                className="cursor-pointer border-border hover:bg-muted/40 dark:hover:bg-white/[0.06]"
+                onClick={(e) => {
+                  const t = e.target as HTMLElement
+                  if (
+                    t.closest(
+                      "button,[data-slot=dropdown-menu-trigger],[data-slot=dropdown-menu-content],[role=menuitem]",
+                    )
+                  ) {
+                    return
+                  }
+                  openChat(task.id, chatSource)
+                }}
               >
                 <TableCell
                   className={`${tasksTableCol.task} whitespace-nowrap text-sm font-medium text-foreground`}
                 >
                   {task.id}
                 </TableCell>
-                <TableCell
-                  className={`${tasksTableCol.owner} whitespace-nowrap text-sm text-foreground`}
-                >
-                  {task.owner}
+                <TableCell className={`${tasksTableCol.solicitante} py-2`}>
+                  <TaskTablePersonCell
+                    name={task.owner}
+                    avatarUrl={solicitanteAvatarUrl}
+                    compact
+                  />
+                </TableCell>
+                <TableCell className={`${tasksTableCol.atendente} py-2`}>
+                  {atendente ? (
+                    <TaskTablePersonCell
+                      name={atendente.name}
+                      avatarUrl={atendente.avatarUrl}
+                      compact
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      Aguardando na fila
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className={`${tasksTableCol.title} space-y-1 text-foreground`}>
                   <div className="flex min-w-0 items-center gap-2">
@@ -1339,40 +1578,105 @@ export function AppointmentsTasks({
                   className={`${tasksTableCol.action} text-foreground`}
                 >
                   <div className="flex justify-end">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 cursor-pointer text-foreground hover:bg-muted hover:text-foreground"
-                      >
-                        <MoreHorizontalIcon className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-44">
-                      <DropdownMenuItem className="cursor-pointer">
-                        <ArrowLeftRightIcon />
-                        Transferir
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">
-                        <Building2Icon />
-                        Alterar setor
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">
-                        <EyeIcon />
-                        Visualizar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">
-                        <HandMetalIcon />
-                        Pegar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" className="cursor-pointer">
-                        <XCircleIcon />
-                        Encerrar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    {showRowActionsMenu ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 cursor-pointer text-foreground hover:bg-muted hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontalIcon className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-44">
+                          {showTransferirAlterarInMenu ? (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() =>
+                                toast.message("Transferir — em breve")
+                              }
+                            >
+                              <ArrowLeftRightIcon />
+                              Transferir
+                            </DropdownMenuItem>
+                          ) : null}
+                          {showTransferirAlterarInMenu ? (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() =>
+                                toast.message("Alterar setor — em breve")
+                              }
+                            >
+                              <Building2Icon />
+                              Alterar setor
+                            </DropdownMenuItem>
+                          ) : null}
+                          {showPegarInMenu ? (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => {
+                                claimTask(task.id)
+                                toast.success(
+                                  "Atendimento atribuído a você. Confira em Meus atendimentos.",
+                                )
+                              }}
+                            >
+                              <HandMetalIcon />
+                              Pegar
+                            </DropdownMenuItem>
+                          ) : null}
+                          {showApagarMenu ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  apagarTask(task.id)
+                                  toast.success("Chamado removido.")
+                                }}
+                              >
+                                <Trash2Icon />
+                                Apagar
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                          {showEncerrarInMenu ? (
+                            <>
+                              {!meusChamadosPage ? (
+                                <DropdownMenuSeparator />
+                              ) : null}
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  encerrarTask(task.id)
+                                  if (filaAtendimentosPage) {
+                                    toast.success(
+                                      "Chamado encerrado. Ele sai da fila e fica disponível em Histórico.",
+                                    )
+                                  } else if (meusAtendimentosPage) {
+                                    toast.success(
+                                      "Chamado encerrado. Ele sai de Meus atendimentos e fica em Histórico.",
+                                    )
+                                  } else {
+                                    toast.success(
+                                      "Chamado encerrado. Consulte o histórico para ver a conversa.",
+                                    )
+                                  }
+                                }}
+                              >
+                                <XCircleIcon />
+                                Encerrar
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>

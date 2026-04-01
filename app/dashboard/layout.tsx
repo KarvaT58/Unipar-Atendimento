@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
+import { AtendimentoTaskProvider } from "@/components/atendimento-task-provider"
 import { CreateAtendimentoProvider } from "@/components/create-atendimento-provider"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -19,6 +20,7 @@ export default function DashboardLayout({
       }
     >
       <CreateAtendimentoProvider>
+        <AtendimentoTaskProvider>
         <AppSidebar variant="inset" />
         <SidebarInset>
           <SiteHeader />
@@ -28,6 +30,7 @@ export default function DashboardLayout({
             {children}
           </div>
         </SidebarInset>
+        </AtendimentoTaskProvider>
       </CreateAtendimentoProvider>
     </SidebarProvider>
   )
