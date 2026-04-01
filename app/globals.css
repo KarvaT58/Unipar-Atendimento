@@ -83,6 +83,9 @@
     --tasks-table-surface: oklch(0.978 0.003 264);
     --tasks-table-header-bg: oklch(0.928 0.005 264);
     --tasks-table-header-fg: oklch(0.22 0.055 264);
+    --scrollbar-tasks-track: oklch(0.75 0 0 / 0.12);
+    --scrollbar-tasks-thumb: oklch(1 0 0);
+    --scrollbar-tasks-thumb-hover: oklch(0.96 0 0);
 }
 
 .dark {
@@ -120,6 +123,9 @@
     --tasks-table-surface: oklch(0.205 0 0);
     --tasks-table-header-bg: oklch(0.155 0 0);
     --tasks-table-header-fg: oklch(0.96 0.004 264);
+    --scrollbar-tasks-track: oklch(1 0 0 / 0.08);
+    --scrollbar-tasks-thumb: oklch(1 0 0);
+    --scrollbar-tasks-thumb-hover: oklch(1 0 0 / 0.88);
 }
 
 @layer base {
@@ -132,4 +138,33 @@
   html {
     @apply font-sans;
     }
+}
+
+/* Lista de atendimentos: barra de rolagem fina, alinhada ao tema */
+.scrollbar-tasks-table {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-tasks-thumb) var(--scrollbar-tasks-track);
+}
+
+.scrollbar-tasks-table::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scrollbar-tasks-table::-webkit-scrollbar-track {
+  margin: 4px 0;
+  background: var(--scrollbar-tasks-track);
+  border-radius: 100px;
+}
+
+.scrollbar-tasks-table::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-tasks-thumb);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-tasks-table::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-tasks-thumb-hover);
+  background-clip: padding-box;
 }

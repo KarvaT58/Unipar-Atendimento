@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -27,17 +26,22 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  ArrowDownIcon,
+  ArrowLeftRightIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  Building2Icon,
+  CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
   ChevronsUpDownIcon,
-  ArrowRightIcon,
+  CirclePlusIcon,
+  EyeIcon,
+  HandMetalIcon,
   MoreHorizontalIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-  EyeOffIcon,
-  CalendarIcon,
+  XCircleIcon,
 } from "lucide-react"
 
 type Task = {
@@ -778,22 +782,46 @@ export const appointmentsTasksData: Task[] = [
 const tasksTableHeadClass =
   "text-sm font-semibold tracking-tight text-[var(--tasks-table-header-fg)] normal-case"
 
+const tasksTableCol = {
+  task: "w-[9%] min-w-[5.5rem] pl-4",
+  owner: "w-[11%] min-w-[7rem]",
+  title: "min-w-0 w-[38%]",
+  status: "w-[10%] min-w-[5.5rem] pl-0",
+  date: "w-[8%] min-w-[4.5rem]",
+  time: "w-[7%] min-w-[4rem]",
+  priority: "w-[9%] min-w-[5rem]",
+  action: "w-[8%] min-w-[3rem] pr-4 text-right",
+} as const
+
 export function AppointmentsTasks({
   page = 1,
-  pageSize = 17,
+  pageSize = 20,
+  showCreateAtendimentoButton = false,
+  showEncerradoStatusFilter = true,
+  historicoPage = false,
+  filaAtendimentosPage = false,
+  meusAtendimentosPage = false,
 }: {
   page?: number
   pageSize?: number
+  showCreateAtendimentoButton?: boolean
+  showEncerradoStatusFilter?: boolean
+  historicoPage?: boolean
+  filaAtendimentosPage?: boolean
+  meusAtendimentosPage?: boolean
 }) {
   const { openCreateAtendimento } = useCreateAtendimento()
 
-  const [statusFilter, setStatusFilter] = useState<Array<Task["status"]>>([
-    "Todo",
-    "In Progress",
-    "Backlog",
-    "Done",
-    "Canceled",
-  ])
+  const [statusFilter, setStatusFilter] = useState<Array<Task["status"]>>(() => {
+    if (historicoPage) return ["Canceled"]
+    if (filaAtendimentosPage) {
+      return ["Todo", "In Progress", "Backlog", "Canceled", "Done"]
+    }
+    if (showEncerradoStatusFilter) {
+      return ["Todo", "In Progress", "Canceled"]
+    }
+    return ["Todo", "In Progress"]
+  })
   const [priorityFilter, setPriorityFilter] = useState<Array<Task["priority"]>>([
     "Low",
     "Medium",
@@ -804,10 +832,31 @@ export function AppointmentsTasks({
     undefined,
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const filteredTasks = appointmentsTasksData.filter((task) => {
+    if (historicoPage) {
+      if (task.status !== "Canceled") {
+        return false
+      }
+    } else if (meusAtendimentosPage) {
+      if (task.status !== "In Progress") {
+        return false
+      }
+    } else if (!filaAtendimentosPage) {
+      if (task.status === "Backlog" || task.status === "Done") {
+        return false
+      }
+      if (!showEncerradoStatusFilter && task.status === "Canceled") {
+        return false
+      }
+    }
+
     const matchesStatus =
-      statusFilter.length === 0 || statusFilter.includes(task.status)
+      historicoPage || meusAtendimentosPage
+        ? true
+        : statusFilter.length === 0 || statusFilter.includes(task.status)
+
     const matchesPriority =
       priorityFilter.length === 0 || priorityFilter.includes(task.priority)
 
@@ -827,7 +876,14 @@ export function AppointmentsTasks({
         openedAt.getDate() === dateFilter.getDate()
     }
 
-    return matchesStatus && matchesPriority && matchesDate
+    const q = searchQuery.trim().toLowerCase()
+    const matchesSearch =
+      q.length === 0 ||
+      task.owner.toLowerCase().includes(q) ||
+      task.title.toLowerCase().includes(q) ||
+      task.id.toLowerCase().includes(q)
+
+    return matchesStatus && matchesPriority && matchesDate && matchesSearch
   })
 
   const totalItems = filteredTasks.length
@@ -843,114 +899,207 @@ export function AppointmentsTasks({
   })
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 px-4 pt-4 pb-3 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pt-4 pb-3 sm:px-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2 max-w-md">
           <Input
-            placeholder="Filtrar tarefas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              filaAtendimentosPage
+                ? "Buscar por responsável, título ou ID..."
+                : "Filtrar tarefas..."
+            }
             className="h-8 w-full min-w-0 sm:w-72"
           />
           <DropdownMenu open={filtersOpen} onOpenChange={setFiltersOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="cursor-pointer">
+              <Button
+                size="sm"
+                className="cursor-pointer rounded-full font-semibold shadow-sm"
+              >
                 Filtros
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[260px] space-y-3">
-              <div className="space-y-1">
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  Status
-                </span>
-                <div className="space-y-1.5">
-                  <DropdownMenuCheckboxItem
-                    className="cursor-pointer"
-                    onSelect={(event) => event.preventDefault()}
-                    checked={statusFilter.includes("Todo")}
-                    onCheckedChange={(checked) => {
-                      setStatusFilter((current) =>
-                        checked
-                          ? [...current, "Todo"]
-                          : current.filter((value) => value !== "Todo"),
-                      )
-                    }}
-                  >
-                    <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                      <span>Aberto</span>
-                      <span className="text-xs text-muted-foreground">21</span>
+              {!historicoPage && !meusAtendimentosPage ? (
+                <>
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Status
                     </span>
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    className="cursor-pointer"
-                    onSelect={(event) => event.preventDefault()}
-                    checked={statusFilter.includes("In Progress")}
-                    onCheckedChange={(checked) => {
-                      setStatusFilter((current) =>
-                        checked
-                          ? [...current, "In Progress"]
-                          : current.filter((value) => value !== "In Progress"),
-                      )
-                    }}
-                  >
-                    <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                      <span>Em andamento</span>
-                      <span className="text-xs text-muted-foreground">21</span>
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    className="cursor-pointer"
-                    onSelect={(event) => event.preventDefault()}
-                    checked={statusFilter.includes("Backlog")}
-                    onCheckedChange={(checked) => {
-                      setStatusFilter((current) =>
-                        checked
-                          ? [...current, "Backlog"]
-                          : current.filter((value) => value !== "Backlog"),
-                      )
-                    }}
-                  >
-                    <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                      <span>Pausado</span>
-                      <span className="text-xs text-muted-foreground">21</span>
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    className="cursor-pointer"
-                    onSelect={(event) => event.preventDefault()}
-                    checked={statusFilter.includes("Done")}
-                    onCheckedChange={(checked) => {
-                      setStatusFilter((current) =>
-                        checked
-                          ? [...current, "Done"]
-                          : current.filter((value) => value !== "Done"),
-                      )
-                    }}
-                  >
-                    <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                      <span>Concluído</span>
-                      <span className="text-xs text-muted-foreground">19</span>
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    className="cursor-pointer"
-                    onSelect={(event) => event.preventDefault()}
-                    checked={statusFilter.includes("Canceled")}
-                    onCheckedChange={(checked) => {
-                      setStatusFilter((current) =>
-                        checked
-                          ? [...current, "Canceled"]
-                          : current.filter((value) => value !== "Canceled"),
-                      )
-                    }}
-                  >
-                    <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                      <span>Encerrado</span>
-                      <span className="text-xs text-muted-foreground">19</span>
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                      {filaAtendimentosPage ? (
+                        <>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Todo")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Todo"]
+                                  : current.filter((value) => value !== "Todo"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Aberto</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("In Progress")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "In Progress"]
+                                  : current.filter(
+                                      (value) => value !== "In Progress",
+                                    ),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Em andamento</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Backlog")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Backlog"]
+                                  : current.filter((value) => value !== "Backlog"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Pausado</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Canceled")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Canceled"]
+                                  : current.filter(
+                                      (value) => value !== "Canceled",
+                                    ),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Encerrado</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Done")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Done"]
+                                  : current.filter((value) => value !== "Done"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Concluído</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        </>
+                      ) : (
+                        <>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("Todo")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "Todo"]
+                                  : current.filter((value) => value !== "Todo"),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Aberto</span>
+                              <span className="text-xs text-muted-foreground">21</span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            onSelect={(event) => event.preventDefault()}
+                            checked={statusFilter.includes("In Progress")}
+                            onCheckedChange={(checked) => {
+                              setStatusFilter((current) =>
+                                checked
+                                  ? [...current, "In Progress"]
+                                  : current.filter(
+                                      (value) => value !== "In Progress",
+                                    ),
+                              )
+                            }}
+                          >
+                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                              <span>Em andamento</span>
+                              <span className="text-xs text-muted-foreground">21</span>
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                          {showEncerradoStatusFilter ? (
+                            <DropdownMenuCheckboxItem
+                              className="cursor-pointer"
+                              onSelect={(event) => event.preventDefault()}
+                              checked={statusFilter.includes("Canceled")}
+                              onCheckedChange={(checked) => {
+                                setStatusFilter((current) =>
+                                  checked
+                                    ? [...current, "Canceled"]
+                                    : current.filter(
+                                        (value) => value !== "Canceled",
+                                      ),
+                                )
+                              }}
+                            >
+                              <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                                <span>Encerrado</span>
+                                <span className="text-xs text-muted-foreground">
+                                  19
+                                </span>
+                              </span>
+                            </DropdownMenuCheckboxItem>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-              <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
 
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-muted-foreground">
@@ -1026,21 +1175,20 @@ export function AppointmentsTasks({
                 <span className="text-[11px] font-medium text-muted-foreground">
                   Data de abertura
                 </span>
-                <div className="space-y-2 rounded-md border border-border bg-background p-2">
+                <div className="space-y-2 rounded-md border border-border bg-card p-2">
                   <Calendar
                     mode="single"
                     selected={pendingDateFilter}
                     onSelect={(date) => setPendingDateFilter(date ?? undefined)}
                     showOutsideDays
                     locale={{ code: "pt-BR" } as any}
-                    className="mx-auto"
+                    className="mx-auto bg-transparent p-0"
                   />
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <Button
                       type="button"
-                      variant="outline"
                       size="sm"
-                      className="h-8 cursor-pointer rounded-md border border-input bg-background px-3 text-[11px] font-medium text-foreground hover:bg-muted hover:text-foreground"
+                      className="cursor-pointer rounded-full font-semibold shadow-sm"
                       onClick={() => {
                         setPendingDateFilter(undefined)
                         setDateFilter(undefined)
@@ -1050,9 +1198,8 @@ export function AppointmentsTasks({
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
                       size="sm"
-                      className="h-8 cursor-pointer rounded-md border border-input bg-white px-3 text-[11px] font-medium text-black hover:bg-zinc-200 hover:text-black dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                      className="cursor-pointer rounded-full font-semibold shadow-sm"
                       onClick={() => {
                         setDateFilter(pendingDateFilter)
                         setFiltersOpen(false)
@@ -1066,52 +1213,53 @@ export function AppointmentsTasks({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            className="cursor-pointer"
-            onClick={openCreateAtendimento}
-          >
-            Criar atendimento
-          </Button>
-        </div>
+        {showCreateAtendimentoButton ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="cursor-pointer gap-2 rounded-full font-semibold shadow-sm"
+              onClick={openCreateAtendimento}
+            >
+              <CirclePlusIcon className="size-4 shrink-0 text-red-500" />
+              Criar Atendimento
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="-mt-1 flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden rounded-lg border border-border bg-[var(--tasks-table-surface)]">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-        <Table className="table-fixed">
-          <TableHeader className="bg-[var(--tasks-table-header-bg)] [&_tr]:border-border">
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className={`w-[9%] min-w-[5.5rem] pl-4 ${tasksTableHeadClass}`}>
-                Tarefa
-              </TableHead>
-              <TableHead className={`w-[11%] min-w-[7rem] ${tasksTableHeadClass}`}>
-                Responsável
-              </TableHead>
-              <TableHead className={`min-w-0 w-[38%] ${tasksTableHeadClass}`}>
-                Título
-              </TableHead>
-              <TableHead className={`w-[10%] min-w-[5.5rem] pl-0 ${tasksTableHeadClass}`}>
-                Status
-              </TableHead>
-              <TableHead className={`w-[8%] min-w-[4.5rem] ${tasksTableHeadClass}`}>
-                Data
-              </TableHead>
-              <TableHead className={`w-[7%] min-w-[4rem] ${tasksTableHeadClass}`}>
-                Horário
-              </TableHead>
-              <TableHead className={`w-[9%] min-w-[5rem] ${tasksTableHeadClass}`}>
-                Prioridade
-              </TableHead>
-              <TableHead
-                className={`w-[8%] min-w-[3rem] pr-4 text-right ${tasksTableHeadClass}`}
-              >
-                Ação
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <div className="scrollbar-tasks-table min-h-0 flex-1 overflow-auto">
+          <table className="w-full caption-bottom text-sm table-fixed">
+            <TableHeader className="bg-transparent [&_tr]:border-0 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-border [&_th]:bg-[var(--tasks-table-header-bg)]">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className={`${tasksTableCol.task} ${tasksTableHeadClass}`}>
+                  Tarefa
+                </TableHead>
+                <TableHead className={`${tasksTableCol.owner} ${tasksTableHeadClass}`}>
+                  Responsável
+                </TableHead>
+                <TableHead className={`${tasksTableCol.title} ${tasksTableHeadClass}`}>
+                  Título
+                </TableHead>
+                <TableHead className={`${tasksTableCol.status} ${tasksTableHeadClass}`}>
+                  Status
+                </TableHead>
+                <TableHead className={`${tasksTableCol.date} ${tasksTableHeadClass}`}>
+                  Data
+                </TableHead>
+                <TableHead className={`${tasksTableCol.time} ${tasksTableHeadClass}`}>
+                  Horário
+                </TableHead>
+                <TableHead className={`${tasksTableCol.priority} ${tasksTableHeadClass}`}>
+                  Prioridade
+                </TableHead>
+                <TableHead className={`${tasksTableCol.action} ${tasksTableHeadClass}`}>
+                  Ação
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
           {visibleTasks.map((task, index) => {
             const globalIndex = start + index
             const openedAtDate = task.openedAt
@@ -1141,29 +1289,41 @@ export function AppointmentsTasks({
                 key={task.id}
                 className="border-border hover:bg-muted/40 dark:hover:bg-white/[0.06]"
               >
-                <TableCell className="whitespace-nowrap pl-4 text-sm font-medium text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.task} whitespace-nowrap text-sm font-medium text-foreground`}
+                >
                   {task.id}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-sm text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.owner} whitespace-nowrap text-sm text-foreground`}
+                >
                   {task.owner}
                 </TableCell>
-                <TableCell className="min-w-0 space-y-1 text-foreground">
+                <TableCell className={`${tasksTableCol.title} space-y-1 text-foreground`}>
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium text-foreground">
                       {task.title}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="whitespace-nowrap pl-0 text-sm text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.status} whitespace-nowrap text-sm text-foreground`}
+                >
                   {statusLabel}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-sm text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.date} whitespace-nowrap text-sm text-foreground`}
+                >
                   {openedAtDateLabel}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-sm text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.time} whitespace-nowrap text-sm text-foreground`}
+                >
                   {openedAtTimeLabel}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-sm text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.priority} whitespace-nowrap text-sm text-foreground`}
+                >
                   <div className="flex items-center gap-1.5">
                     {task.priority === "High" ? (
                       <ArrowUpIcon className="size-3 shrink-0 text-red-500 dark:text-red-400" />
@@ -1175,7 +1335,10 @@ export function AppointmentsTasks({
                     <span>{priorityLabel}</span>
                   </div>
                 </TableCell>
-                <TableCell className="flex items-center justify-end gap-1 pr-4 text-foreground">
+                <TableCell
+                  className={`${tasksTableCol.action} text-foreground`}
+                >
+                  <div className="flex justify-end">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -1186,21 +1349,37 @@ export function AppointmentsTasks({
                         <MoreHorizontalIcon className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="cursor-pointer">Transferir</DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">Alterar setor</DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">Visualizar</DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer">Pegar chamado</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="min-w-44">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <ArrowLeftRightIcon />
+                        Transferir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Building2Icon />
+                        Alterar setor
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer">
+                        <EyeIcon />
+                        Visualizar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer">
+                        <HandMetalIcon />
+                        Pegar
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" className="cursor-pointer">Encerrar</DropdownMenuItem>
+                      <DropdownMenuItem variant="destructive" className="cursor-pointer">
+                        <XCircleIcon />
+                        Encerrar
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             )
           })}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </table>
         </div>
 
         <footer

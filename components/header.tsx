@@ -1,5 +1,6 @@
 "use client"
 
+import { DoorOpenIcon } from "lucide-react"
 import Link from "next/link"
 
 import { Logo } from "@/components/logo"
@@ -16,7 +17,16 @@ export function HeroHeader() {
             </Link>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button asChild size="sm">
-                <Link href="/login">Entrar</Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2"
+                >
+                  Entrar
+                  <DoorOpenIcon
+                    className="size-4 shrink-0 text-red-500"
+                    aria-hidden
+                  />
+                </Link>
               </Button>
               <Button asChild variant="outline" size="sm">
                 <Link href="/signup">Solicitar acesso</Link>

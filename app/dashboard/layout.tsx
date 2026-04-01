@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }>) {
   return (
     <SidebarProvider
-      className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+      className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500 h-svh max-h-svh min-h-0 overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",

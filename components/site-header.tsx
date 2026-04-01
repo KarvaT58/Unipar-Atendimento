@@ -1,9 +1,9 @@
 "use client"
 
 import {
+  BarChart2Icon,
   BellRingIcon,
   CircleUserRoundIcon,
-  HistoryIcon,
   InfoIcon,
   KanbanSquareIcon,
   LayoutDashboardIcon,
@@ -34,12 +34,12 @@ import {
   getDashboardPageTitle,
   groupsRoute,
   helpRoute,
-  historyRoute,
   ideasRoute,
   internalChatRoute,
   kanbanRoute,
   loansRoute,
   profileRoute,
+  reportsRoute,
 } from "@/lib/dashboard-routes"
 import {
   DropdownMenu,
@@ -62,7 +62,7 @@ const headerIconItems: Array<{ href: string; icon: LucideIcon }> = [
   { href: loansRoute.href, icon: WalletCardsIcon },
   { href: announcementsEventsRoute.href, icon: MegaphoneIcon },
   { href: kanbanRoute.href, icon: KanbanSquareIcon },
-  { href: historyRoute.href, icon: HistoryIcon },
+  { href: reportsRoute.href, icon: BarChart2Icon },
   { href: ideasRoute.href, icon: LightbulbIcon },
   { href: helpRoute.href, icon: InfoIcon },
   { href: extensionListRoute.href, icon: PhoneIcon },
@@ -131,7 +131,7 @@ export function SiteHeader() {
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 bg-transparent transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="cursor-pointer -ml-1" />
+        <SidebarTrigger className="-ml-1 cursor-pointer text-red-500 hover:bg-red-500/10 hover:text-red-600" />
         <div className="h-6 w-px bg-border shrink-0" />
         <div className="flex items-center gap-2">
           {CurrentPageIcon ? <CurrentPageIcon className="size-4 text-muted-foreground" /> : null}
@@ -180,7 +180,7 @@ export function SiteHeader() {
                 <button
                   type="button"
                   className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl border border-border bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-                  onClick={() => router.push(historyRoute.href)}
+                  onClick={() => router.push(reportsRoute.href)}
                 >
                   Visualizar todas
                 </button>

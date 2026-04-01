@@ -8,17 +8,19 @@ import * as React from "react"
 import {
   administrationRoute,
   announcementsEventsRoute,
+  appointmentsMyAtendimentosRoute,
   appointmentsRoute,
+  appointmentsSubRoutes,
   createUserRoute,
   dashboardHomeRoute,
   groupsRoute,
   helpRoute,
-  historyRoute,
   ideasRoute,
   internalChatRoute,
   kanbanRoute,
   loansRoute,
   extensionListRoute,
+  reportsRoute,
 } from "@/lib/dashboard-routes"
 import {
   defaultStoredProfile,
@@ -41,11 +43,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
+  BarChart2Icon,
+  ChevronRightIcon,
   CirclePlusIcon,
-  HistoryIcon,
   InfoIcon,
   KanbanSquareIcon,
   LayoutDashboardIcon,
@@ -61,6 +67,7 @@ import {
   WalletCardsIcon,
   type LucideIcon,
 } from "lucide-react"
+import { Collapsible as CollapsiblePrimitive } from "radix-ui"
 
 type SidebarItem = {
   title: string
@@ -73,11 +80,6 @@ const primaryItems: SidebarItem[] = [
     title: dashboardHomeRoute.title,
     url: dashboardHomeRoute.href,
     icon: LayoutDashboardIcon,
-  },
-  {
-    title: appointmentsRoute.title,
-    url: appointmentsRoute.href,
-    icon: ListIcon,
   },
   {
     title: internalChatRoute.title,
@@ -108,9 +110,9 @@ const secondaryItems: SidebarItem[] = [
     icon: KanbanSquareIcon,
   },
   {
-    title: historyRoute.title,
-    url: historyRoute.href,
-    icon: HistoryIcon,
+    title: reportsRoute.title,
+    url: reportsRoute.href,
+    icon: BarChart2Icon,
   },
 ]
 
@@ -150,6 +152,89 @@ function isItemActive(pathname: string, url: string) {
   return pathname === url || pathname.startsWith(`${url}/`)
 }
 
+function SidebarAtendimentosNav({ pathname }: { pathname: string }) {
+  const { state, isMobile } = useSidebar()
+  const collapsed = state === "collapsed" && !isMobile
+  const branchActive = pathname.startsWith(appointmentsRoute.href)
+
+  const [menuOpen, setMenuOpen] = React.useState(branchActive)
+  React.useEffect(() => {
+    if (branchActive) {
+      setMenuOpen(true)
+    }
+  }, [branchActive])
+
+  if (collapsed) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          tooltip={appointmentsRoute.title}
+          size="sm"
+          isActive={branchActive}
+          className={`${sidebarNavButtonActiveClass} cursor-pointer`}
+        >
+          <Link href={appointmentsMyAtendimentosRoute.href}>
+            <div className="relative">
+              <ListIcon />
+            </div>
+            <span className="group-data-[collapsible=icon]:hidden">
+              {appointmentsRoute.title}
+            </span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
+  }
+
+  return (
+    <SidebarMenuItem>
+      <CollapsiblePrimitive.Root
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        className="group/collapsible w-full min-w-0"
+      >
+        <CollapsiblePrimitive.Trigger asChild>
+          <SidebarMenuButton
+            tooltip={appointmentsRoute.title}
+            type="button"
+            size="sm"
+            isActive={branchActive}
+            className={`${sidebarNavButtonActiveClass} cursor-pointer`}
+          >
+            <div className="relative">
+              <ListIcon />
+            </div>
+            <span className="group-data-[collapsible=icon]:hidden">
+              {appointmentsRoute.title}
+            </span>
+            <ChevronRightIcon className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsiblePrimitive.Trigger>
+        <CollapsiblePrimitive.Content>
+          <SidebarMenuSub>
+            {appointmentsSubRoutes.map((sub) => (
+              <SidebarMenuSubItem key={sub.href}>
+                <SidebarMenuSubButton
+                  asChild
+                  isActive={isItemActive(pathname, sub.href)}
+                >
+                  <Link href={sub.href}>
+                    <span>{sub.title}</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsiblePrimitive.Content>
+      </CollapsiblePrimitive.Root>
+    </SidebarMenuItem>
+  )
+}
+
+const sidebarNavButtonActiveClass =
+  "relative h-8 rounded-lg px-2.5 text-[13px] transition-all duration-200 data-[active=true]:bg-transparent data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-1 data-[active=true]:before:h-4 data-[active=true]:before:w-0.5 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-red-500 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:data-[active=true]:before:left-0.5 group-data-[collapsible=icon]:data-[active=true]:before:h-5 group-data-[collapsible=icon]:data-[active=true]:before:w-0.5"
+
 function SidebarNavItem({
   item,
   pathname,
@@ -166,7 +251,7 @@ function SidebarNavItem({
         tooltip={item.title}
         size="sm"
         isActive={active}
-        className="relative h-8 rounded-lg px-2.5 text-[13px] transition-all duration-200 data-[active=true]:bg-transparent data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-1 data-[active=true]:before:h-4 data-[active=true]:before:w-0.5 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-red-500 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:data-[active=true]:before:left-0.5 group-data-[collapsible=icon]:data-[active=true]:before:h-5 group-data-[collapsible=icon]:data-[active=true]:before:w-0.5"
+        className={sidebarNavButtonActiveClass}
       >
         <Link href={item.url}>
           <div className="relative">
@@ -249,13 +334,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem className="flex items-center gap-2">
                 <SidebarMenuButton
                   type="button"
-                  tooltip="Criar rapido"
+                  tooltip="Criar Atendimento"
                   size="sm"
                   onClick={openCreateAtendimento}
                   className="min-w-8 cursor-pointer rounded-lg bg-zinc-950 text-white duration-200 ease-linear hover:bg-zinc-900 hover:text-white active:bg-zinc-900 active:text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 dark:hover:text-neutral-900 dark:active:bg-neutral-200 dark:active:text-neutral-900"
                 >
-                  <CirclePlusIcon />
-                  <span className="group-data-[collapsible=icon]:hidden">Criar rapido</span>
+                  <CirclePlusIcon className="text-red-500" />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    Criar Atendimento
+                  </span>
                 </SidebarMenuButton>
                 <Button
                   size="icon"
@@ -268,7 +355,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuItem>
             </SidebarMenu>
             <SidebarMenu className="gap-1">
-              {primaryItems.map((item) => (
+              <SidebarNavItem
+                item={primaryItems[0]!}
+                pathname={pathname}
+              />
+              <SidebarAtendimentosNav pathname={pathname} />
+              {primaryItems.slice(1).map((item) => (
                 <SidebarNavItem key={item.title} item={item} pathname={pathname} />
               ))}
             </SidebarMenu>
@@ -307,7 +399,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser user={user} />
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   )
 }

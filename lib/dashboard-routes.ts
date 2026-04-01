@@ -15,6 +15,33 @@ export const appointmentsRoute = {
   slug: "atendimentos",
 } as const satisfies DashboardRouteItem
 
+export const appointmentsMyChamadosRoute = {
+  title: "Meus Chamados",
+  href: "/dashboard/atendimentos/meus-chamados",
+} as const satisfies DashboardRouteItem
+
+export const appointmentsMyAtendimentosRoute = {
+  title: "Meus Atendimentos",
+  href: "/dashboard/atendimentos/meus-atendimentos",
+} as const satisfies DashboardRouteItem
+
+export const appointmentsHistoricoRoute = {
+  title: "Historico de atendimentos",
+  href: "/dashboard/atendimentos/historico",
+} as const satisfies DashboardRouteItem
+
+export const appointmentsFilaAtendimentosRoute = {
+  title: "Fila de atendimentos",
+  href: "/dashboard/atendimentos/fila-de-atendimentos",
+} as const satisfies DashboardRouteItem
+
+export const appointmentsSubRoutes = [
+  appointmentsMyChamadosRoute,
+  appointmentsMyAtendimentosRoute,
+  appointmentsFilaAtendimentosRoute,
+  appointmentsHistoricoRoute,
+] as const
+
 export const announcementsEventsRoute = {
   title: "Anuncios/Eventos",
   href: "/dashboard/anuncios-eventos",
@@ -39,10 +66,10 @@ export const kanbanRoute = {
   slug: "kanban",
 } as const satisfies DashboardRouteItem
 
-export const historyRoute = {
-  title: "Historicos",
-  href: "/dashboard/historicos",
-  slug: "historicos",
+export const reportsRoute = {
+  title: "Relatórios",
+  href: "/dashboard/relatorios",
+  slug: "relatorios",
 } as const satisfies DashboardRouteItem
 
 export const loansRoute = {
@@ -97,7 +124,7 @@ export const dashboardMainRoutes = [
   announcementsEventsRoute,
   groupsRoute,
   kanbanRoute,
-  historyRoute,
+  reportsRoute,
 ] as const
 
 export const dashboardAdminRoutes = [
@@ -109,13 +136,12 @@ export const dashboardAdminRoutes = [
 ] as const
 
 export const dashboardSectionRoutes = [
-  appointmentsRoute,
   internalChatRoute,
   loansRoute,
   announcementsEventsRoute,
   groupsRoute,
   kanbanRoute,
-  historyRoute,
+  reportsRoute,
   ideasRoute,
   helpRoute,
   extensionListRoute,
@@ -125,10 +151,12 @@ export const dashboardSectionRoutes = [
 ] as const
 
 const dashboardPageTitleMap = new Map<string, string>(
-  [...dashboardMainRoutes, ...dashboardAdminRoutes, profileRoute].map((route) => [
-    route.href,
-    route.title,
-  ])
+  [
+    ...dashboardMainRoutes,
+    ...dashboardAdminRoutes,
+    profileRoute,
+    ...appointmentsSubRoutes,
+  ].map((route) => [route.href, route.title])
 )
 
 export function getDashboardPageTitle(pathname: string) {

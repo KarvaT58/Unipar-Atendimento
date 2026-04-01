@@ -16,9 +16,23 @@ import {
   appointmentsTasksData,
 } from "@/components/appointments-tasks"
 
-const PAGE_SIZE = 17
+const PAGE_SIZE = 20
 
-export function AppointmentsTasksPage() {
+type AppointmentsTasksPageProps = {
+  showCreateAtendimentoButton?: boolean
+  showEncerradoStatusFilter?: boolean
+  historicoPage?: boolean
+  filaAtendimentosPage?: boolean
+  meusAtendimentosPage?: boolean
+}
+
+export function AppointmentsTasksPage({
+  showCreateAtendimentoButton = false,
+  showEncerradoStatusFilter = true,
+  historicoPage = false,
+  filaAtendimentosPage = false,
+  meusAtendimentosPage = false,
+}: AppointmentsTasksPageProps) {
   const [page, setPage] = useState(1)
   const totalPages = Math.max(1, Math.ceil(appointmentsTasksData.length / PAGE_SIZE))
   const totalTasks = appointmentsTasksData.length
@@ -29,11 +43,19 @@ export function AppointmentsTasksPage() {
   }
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-0">
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-        <AppointmentsTasks page={page} pageSize={PAGE_SIZE} />
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-0 overflow-hidden">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+        <AppointmentsTasks
+          page={page}
+          pageSize={PAGE_SIZE}
+          showCreateAtendimentoButton={showCreateAtendimentoButton}
+          showEncerradoStatusFilter={showEncerradoStatusFilter}
+          historicoPage={historicoPage}
+          filaAtendimentosPage={filaAtendimentosPage}
+          meusAtendimentosPage={meusAtendimentosPage}
+        />
       </div>
-      <div className="flex items-center justify-between gap-4 px-6 pb-[4px] pt-2 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between gap-4 px-6 pb-[4px] pt-2 text-xs text-muted-foreground">
         <span className="space-x-1">
           <span>Total</span>
           <span className="font-medium text-foreground">{totalTasks}</span>
