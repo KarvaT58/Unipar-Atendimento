@@ -1,0 +1,313 @@
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import * as React from "react"
+
+import {
+  administrationRoute,
+  announcementsEventsRoute,
+  appointmentsRoute,
+  createUserRoute,
+  dashboardHomeRoute,
+  groupsRoute,
+  helpRoute,
+  historyRoute,
+  ideasRoute,
+  internalChatRoute,
+  kanbanRoute,
+  loansRoute,
+  extensionListRoute,
+} from "@/lib/dashboard-routes"
+import {
+  defaultStoredProfile,
+  normalizeStoredProfile,
+  profileStorageKey,
+  profileUpdatedEventName,
+  toNavUser,
+} from "@/lib/profile-storage"
+import { useCreateAtendimento } from "@/components/create-atendimento-provider"
+import { NavUser } from "@/components/nav-user"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar"
+import {
+  CirclePlusIcon,
+  HistoryIcon,
+  InfoIcon,
+  KanbanSquareIcon,
+  LayoutDashboardIcon,
+  LightbulbIcon,
+  ListIcon,
+  MailIcon,
+  MegaphoneIcon,
+  MessagesSquareIcon,
+  PhoneIcon,
+  ShieldIcon,
+  UserPlusIcon,
+  UsersIcon,
+  WalletCardsIcon,
+  type LucideIcon,
+} from "lucide-react"
+
+type SidebarItem = {
+  title: string
+  url: string
+  icon: LucideIcon
+}
+
+const primaryItems: SidebarItem[] = [
+  {
+    title: dashboardHomeRoute.title,
+    url: dashboardHomeRoute.href,
+    icon: LayoutDashboardIcon,
+  },
+  {
+    title: appointmentsRoute.title,
+    url: appointmentsRoute.href,
+    icon: ListIcon,
+  },
+  {
+    title: internalChatRoute.title,
+    url: internalChatRoute.href,
+    icon: MessagesSquareIcon,
+  },
+  {
+    title: groupsRoute.title,
+    url: groupsRoute.href,
+    icon: UsersIcon,
+  },
+]
+
+const secondaryItems: SidebarItem[] = [
+  {
+    title: loansRoute.title,
+    url: loansRoute.href,
+    icon: WalletCardsIcon,
+  },
+  {
+    title: announcementsEventsRoute.title,
+    url: announcementsEventsRoute.href,
+    icon: MegaphoneIcon,
+  },
+  {
+    title: kanbanRoute.title,
+    url: kanbanRoute.href,
+    icon: KanbanSquareIcon,
+  },
+  {
+    title: historyRoute.title,
+    url: historyRoute.href,
+    icon: HistoryIcon,
+  },
+]
+
+const adminItems: SidebarItem[] = [
+  {
+    title: ideasRoute.title,
+    url: ideasRoute.href,
+    icon: LightbulbIcon,
+  },
+  {
+    title: helpRoute.title,
+    url: helpRoute.href,
+    icon: InfoIcon,
+  },
+  {
+    title: extensionListRoute.title,
+    url: extensionListRoute.href,
+    icon: PhoneIcon,
+  },
+]
+
+const managementItems: SidebarItem[] = [
+  {
+    title: administrationRoute.title,
+    url: administrationRoute.href,
+    icon: ShieldIcon,
+  },
+]
+
+const defaultUser = toNavUser(defaultStoredProfile)
+
+function isItemActive(pathname: string, url: string) {
+  if (url === dashboardHomeRoute.href) {
+    return pathname === url
+  }
+
+  return pathname === url || pathname.startsWith(`${url}/`)
+}
+
+function SidebarNavItem({
+  item,
+  pathname,
+}: {
+  item: SidebarItem
+  pathname: string
+}) {
+  const active = isItemActive(pathname, item.url)
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        tooltip={item.title}
+        size="sm"
+        isActive={active}
+        className="relative h-8 rounded-lg px-2.5 text-[13px] transition-all duration-200 data-[active=true]:bg-transparent data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:shadow-none data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-1 data-[active=true]:before:h-4 data-[active=true]:before:w-0.5 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-red-500 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:data-[active=true]:before:left-0.5 group-data-[collapsible=icon]:data-[active=true]:before:h-5 group-data-[collapsible=icon]:data-[active=true]:before:w-0.5"
+      >
+        <Link href={item.url}>
+          <div className="relative">
+            <item.icon />
+          </div>
+          <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const { openCreateAtendimento } = useCreateAtendimento()
+  const [user, setUser] = React.useState(defaultUser)
+
+  React.useEffect(() => {
+    function syncStoredProfile() {
+      if (typeof window === "undefined") {
+        return
+      }
+
+      try {
+        const storedProfile = window.localStorage.getItem(profileStorageKey)
+
+        if (!storedProfile) {
+          setUser(defaultUser)
+          return
+        }
+
+        setUser(toNavUser(normalizeStoredProfile(JSON.parse(storedProfile))))
+      } catch {
+        setUser(defaultUser)
+      }
+    }
+
+    syncStoredProfile()
+    window.addEventListener(profileUpdatedEventName, syncStoredProfile)
+    window.addEventListener("storage", syncStoredProfile)
+
+    return () => {
+      window.removeEventListener(profileUpdatedEventName, syncStoredProfile)
+      window.removeEventListener("storage", syncStoredProfile)
+    }
+  }, [])
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              size="lg"
+              className="rounded-xl px-3 data-[slot=sidebar-menu-button]:p-2! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            >
+              <Link href={dashboardHomeRoute.href}>
+                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md group-data-[collapsible=icon]:size-7">
+                  <Image
+                    src="/logo.png"
+                    alt="Logo da Unipar"
+                    width={40}
+                    height={40}
+                    className="size-full scale-125 object-contain"
+                  />
+                </div>
+                <span className="text-base font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+                  Unipar
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent className="flex flex-col gap-2">
+            <SidebarMenu>
+              <SidebarMenuItem className="flex items-center gap-2">
+                <SidebarMenuButton
+                  type="button"
+                  tooltip="Criar rapido"
+                  size="sm"
+                  onClick={openCreateAtendimento}
+                  className="min-w-8 cursor-pointer rounded-lg bg-zinc-950 text-white duration-200 ease-linear hover:bg-zinc-900 hover:text-white active:bg-zinc-900 active:text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 dark:hover:text-neutral-900 dark:active:bg-neutral-200 dark:active:text-neutral-900"
+                >
+                  <CirclePlusIcon />
+                  <span className="group-data-[collapsible=icon]:hidden">Criar rapido</span>
+                </SidebarMenuButton>
+                <Button
+                  size="icon"
+                  className="size-8 group-data-[collapsible=icon]:hidden"
+                  variant="outline"
+                >
+                  <MailIcon />
+                  <span className="sr-only">Inbox</span>
+                </Button>
+              </SidebarMenuItem>
+            </SidebarMenu>
+            <SidebarMenu className="gap-1">
+              {primaryItems.map((item) => (
+                <SidebarNavItem key={item.title} item={item} pathname={pathname} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="my-auto">
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {secondaryItems.map((item) => (
+                <SidebarNavItem key={item.title} item={item} pathname={pathname} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupContent className="flex flex-col gap-1">
+            <SidebarMenu className="gap-1">
+              {adminItems.map((item) => (
+                <SidebarNavItem key={item.title} item={item} pathname={pathname} />
+              ))}
+            </SidebarMenu>
+            <Separator className="my-1 bg-red-500/80 group-data-[collapsible=icon]:hidden" />
+            <SidebarMenu className="gap-1">
+              {managementItems.map((item) => (
+                <SidebarNavItem
+                  key={item.title}
+                  item={item}
+                  pathname={pathname}
+                />
+              ))}
+            </SidebarMenu>
+            <Separator className="mt-1 bg-red-500/80 group-data-[collapsible=icon]:hidden" />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={user} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
