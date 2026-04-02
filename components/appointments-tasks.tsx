@@ -50,6 +50,7 @@ import {
   CirclePlusIcon,
   HandMetalIcon,
   MoreHorizontalIcon,
+  RotateCcwIcon,
   Trash2Icon,
   XCircleIcon,
 } from "lucide-react"
@@ -60,20 +61,28 @@ export type Task = {
   title: string
   /** Nome do solicitante (exibido com foto na lista e no chat). */
   owner: string
-  status: "In Progress" | "Backlog" | "Todo" | "Canceled" | "Done"
+  status: "In Progress" | "Todo" | "Canceled"
   priority: "Low" | "Medium" | "High"
   openedAt?: string
   /** Chamado aberto por mim (Meus chamados). */
   createdByUserId?: "me" | "other"
   /** Quem pegou o atendimento na fila (mock). */
   claimedByUserId?: string | null
+  /**
+   * Encerrado pelo próprio solicitante em Meus chamados — omitido do Histórico.
+   */
+  encerradoPeloSolicitante?: boolean
 }
 
 export function mergeAtendimentoTasks(
   base: Task[],
   overrides: Record<
     string,
-    { claimedByUserId?: string | null; status?: Task["status"] }
+    {
+      claimedByUserId?: string | null
+      status?: Task["status"]
+      encerradoPeloSolicitante?: boolean
+    }
   >,
   deletedIds: ReadonlySet<string>,
 ): Task[] {
@@ -89,6 +98,10 @@ export function mergeAtendimentoTasks(
             ? o.claimedByUserId
             : t.claimedByUserId,
         status: o.status ?? t.status,
+        encerradoPeloSolicitante:
+          o.encerradoPeloSolicitante !== undefined
+            ? o.encerradoPeloSolicitante
+            : t.encerradoPeloSolicitante,
       }
     })
 }
@@ -108,7 +121,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Try to calculate the EXE feed, maybe it will index the multi-byte pixel!",
     owner: "Bruno Lima",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
     createdByUserId: "me",
   },
@@ -126,7 +139,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "The SAS interface is down, bypass the open-source pixel so we can back up ...",
     owner: "Diego Costa",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -142,7 +155,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Use the digital TLS panel, then you can transmit the haptic system!",
     owner: "Felipe Rocha",
-    status: "Done",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -150,7 +163,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "The UTF8 application is down, parse the neural bandwidth so we can back ...",
     owner: "Gabriela Alves",
-    status: "Done",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -193,7 +206,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add color badges for appointment priority levels.",
     owner: "Lucas Pereira",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -217,7 +230,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow bulk update of appointment status from table view.",
     owner: "Otávio Martins",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -241,7 +254,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Email reminders are not respecting user locale formatting.",
     owner: "Sara Oliveira",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -265,7 +278,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Write changelog entry for appointments dashboard redesign.",
     owner: "William Araújo",
-    status: "Done",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -273,7 +286,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add quick action buttons inside each appointment row.",
     owner: "Ana Souza",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -289,7 +302,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Introduce tag-based labels for appointment categories.",
     owner: "Carla Mendes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -305,7 +318,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add export to CSV button for filtered appointments.",
     owner: "Eduarda Nunes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -321,7 +334,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Show appointment analytics summary above the table.",
     owner: "Gabriela Alves",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -337,7 +350,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Clean up obsolete screenshots from the appointments documentation.",
     owner: "Isabela Ferreira",
-    status: "Done",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -345,7 +358,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow pinning important appointments to the top of the list.",
     owner: "João Pedro",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -369,7 +382,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Update API docs for new appointment webhooks.",
     owner: "Mariana Santos",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -377,7 +390,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add inline editing for appointment notes.",
     owner: "Natalia Ribeiro",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -401,7 +414,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Pagination displays wrong total when filters are active.",
     owner: "Rafael Gomes",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -417,7 +430,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add quick filter chips for the most common appointment states.",
     owner: "Thiago Carvalho",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -433,7 +446,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow exporting selected appointments only instead of full page.",
     owner: "William Araújo",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -449,7 +462,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add side panel with full appointment details when clicking a row.",
     owner: "Bruno Lima",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -465,7 +478,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Show small status icon next to each appointment ID.",
     owner: "Diego Costa",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -473,7 +486,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Clarify difference between canceled and no-show statuses in docs.",
     owner: "Eduarda Nunes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -489,7 +502,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Support color themes per appointment type to improve visual scanning.",
     owner: "Gabriela Alves",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -505,7 +518,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add keyboard shortcut to jump directly to appointments section.",
     owner: "Isabela Ferreira",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -513,7 +526,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Search by patient name is case-sensitive and should not be.",
     owner: "João Pedro",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -521,7 +534,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Display last updated timestamp for the appointments list.",
     owner: "Karen Souza",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -529,7 +542,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Add section about appointment permissions and roles.",
     owner: "Lucas Pereira",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -545,7 +558,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Provide quick actions for confirming or canceling directly in the list.",
     owner: "Natalia Ribeiro",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -561,7 +574,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow grouping appointments by day or practitioner.",
     owner: "Paula Fernandes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -569,7 +582,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Appointment filter chips are not cleared when pressing the reset button.",
     owner: "Rafael Gomes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -577,7 +590,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Show quick stats for total confirmed, pending, and canceled appointments.",
     owner: "Sara Oliveira",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -593,7 +606,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add preset filters for 'Today', 'This week' and 'This month'.",
     owner: "Vanessa Costa",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -601,7 +614,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Explain how appointment reminders are scheduled in the background jobs.",
     owner: "William Araújo",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -609,7 +622,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Enable drag and drop reordering of appointments within the same day.",
     owner: "Ana Souza",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -625,7 +638,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Support saving custom table layouts per user profile.",
     owner: "Carla Mendes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -641,7 +654,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Display appointment source (web, phone, app) as an extra column.",
     owner: "Eduarda Nunes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -649,7 +662,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Sticky header overlaps first row when zoom level is increased.",
     owner: "Felipe Rocha",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -657,7 +670,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow exporting appointment list in XLSX format.",
     owner: "Gabriela Alves",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   // extra pages of fake tasks (visual/demo only)
@@ -666,7 +679,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Describe pagination behavior and edge cases for appointments list.",
     owner: "Ana Souza",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -674,7 +687,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Clicking next page resets selected filters unexpectedly.",
     owner: "Bruno Lima",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -682,7 +695,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Persist last visited appointments page between sessions.",
     owner: "Carla Mendes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -698,7 +711,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Support infinite scroll as an alternative to pagination.",
     owner: "Eduarda Nunes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -706,7 +719,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Ellipsis icon sometimes shows even when there is only one page.",
     owner: "Felipe Rocha",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -714,7 +727,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add quick jump input to go directly to a specific page.",
     owner: "Gabriela Alves",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -730,7 +743,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Mobile layout cuts off last appointment row when pagination is visible.",
     owner: "Isabela Ferreira",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -738,7 +751,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add compact density option to fit more appointments per page.",
     owner: "João Pedro",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -746,7 +759,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Create visual examples of each appointment priority combination.",
     owner: "Karen Souza",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -762,7 +775,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Add toggle to show completed appointments on separate tab.",
     owner: "Mariana Santos",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -770,7 +783,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Scrolling to top after changing page causes slight layout jump.",
     owner: "Natalia Ribeiro",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -778,7 +791,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Allow multi-select actions to span across pages when desired.",
     owner: "Otávio Martins",
-    status: "Backlog",
+    status: "Todo",
     priority: "High",
   },
   {
@@ -786,7 +799,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Documentation",
     title: "Explain how pagination interacts with real-time updates.",
     owner: "Paula Fernandes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -794,7 +807,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Appointment count badge does not always match visible rows.",
     owner: "Rafael Gomes",
-    status: "Backlog",
+    status: "Todo",
     priority: "Medium",
   },
   {
@@ -810,7 +823,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Bug",
     title: "Tooltip for page numbers is misaligned in RTL languages.",
     owner: "Thiago Carvalho",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
   {
@@ -818,7 +831,7 @@ export const appointmentsTasksData: Task[] = [
     type: "Feature",
     title: "Expose pagination state to analytics for usage tracking.",
     owner: "Vanessa Costa",
-    status: "Backlog",
+    status: "Todo",
     priority: "Low",
   },
 ]
@@ -877,6 +890,7 @@ export function AppointmentsTasks({
     deletedIds,
     claimTask,
     encerrarTask,
+    reabrirTask,
     apagarTask,
   } = useAtendimentoTasks()
 
@@ -895,10 +909,10 @@ export function AppointmentsTasks({
   const [statusFilter, setStatusFilter] = useState<Array<Task["status"]>>(() => {
     if (historicoPage) return ["Canceled"]
     if (filaAtendimentosPage) {
-      return ["Todo", "In Progress", "Backlog", "Canceled", "Done"]
+      return ["Todo", "In Progress", "Canceled"]
     }
     if (meusChamadosPage) {
-      return ["Todo", "In Progress", "Backlog", "Canceled"]
+      return ["Todo", "In Progress", "Canceled"]
     }
     if (showEncerradoStatusFilter) {
       return ["Todo", "In Progress", "Canceled"]
@@ -924,6 +938,9 @@ export function AppointmentsTasks({
       if (task.status !== "Canceled") {
         return false
       }
+      if (task.encerradoPeloSolicitante) {
+        return false
+      }
     } else if (meusAtendimentosPage) {
       if (
         claimedBy !== ATENDIMENTO_CURRENT_USER_ID ||
@@ -939,13 +956,7 @@ export function AppointmentsTasks({
       if (task.status === "Canceled") {
         return false
       }
-      if (claimedBy === ATENDIMENTO_CURRENT_USER_ID) {
-        return false
-      }
     } else if (!filaAtendimentosPage) {
-      if (task.status === "Backlog" || task.status === "Done") {
-        return false
-      }
       if (!showEncerradoStatusFilter && task.status === "Canceled") {
         return false
       }
@@ -1076,25 +1087,6 @@ export function AppointmentsTasks({
                           <DropdownMenuCheckboxItem
                             className="cursor-pointer"
                             onSelect={(event) => event.preventDefault()}
-                            checked={statusFilter.includes("Backlog")}
-                            onCheckedChange={(checked) => {
-                              setStatusFilter((current) =>
-                                checked
-                                  ? [...current, "Backlog"]
-                                  : current.filter((value) => value !== "Backlog"),
-                              )
-                            }}
-                          >
-                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                              <span>Pausado</span>
-                              <span className="text-xs text-muted-foreground">
-                                —
-                              </span>
-                            </span>
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            className="cursor-pointer"
-                            onSelect={(event) => event.preventDefault()}
                             checked={statusFilter.includes("Canceled")}
                             onCheckedChange={(checked) => {
                               setStatusFilter((current) =>
@@ -1108,25 +1100,6 @@ export function AppointmentsTasks({
                           >
                             <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
                               <span>Encerrado</span>
-                              <span className="text-xs text-muted-foreground">
-                                —
-                              </span>
-                            </span>
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            className="cursor-pointer"
-                            onSelect={(event) => event.preventDefault()}
-                            checked={statusFilter.includes("Done")}
-                            onCheckedChange={(checked) => {
-                              setStatusFilter((current) =>
-                                checked
-                                  ? [...current, "Done"]
-                                  : current.filter((value) => value !== "Done"),
-                              )
-                            }}
-                          >
-                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                              <span>Concluído</span>
                               <span className="text-xs text-muted-foreground">
                                 —
                               </span>
@@ -1170,25 +1143,6 @@ export function AppointmentsTasks({
                           >
                             <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
                               <span>Em andamento</span>
-                              <span className="text-xs text-muted-foreground">
-                                —
-                              </span>
-                            </span>
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            className="cursor-pointer"
-                            onSelect={(event) => event.preventDefault()}
-                            checked={statusFilter.includes("Backlog")}
-                            onCheckedChange={(checked) => {
-                              setStatusFilter((current) =>
-                                checked
-                                  ? [...current, "Backlog"]
-                                  : current.filter((value) => value !== "Backlog"),
-                              )
-                            }}
-                          >
-                            <span className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
-                              <span>Pausado</span>
                               <span className="text-xs text-muted-foreground">
                                 —
                               </span>
@@ -1472,11 +1426,7 @@ export function AppointmentsTasks({
                 ? "Aberto"
                 : task.status === "In Progress"
                   ? "Em andamento"
-                  : task.status === "Backlog"
-                    ? "Pausado"
-                    : task.status === "Done"
-                      ? "Concluído"
-                      : "Encerrado"
+                  : "Encerrado"
 
             const claimedByRow = task.claimedByUserId ?? null
             const showPegarInMenu =
@@ -1485,17 +1435,24 @@ export function AppointmentsTasks({
             const showApagarMenu =
               meusChamadosPage &&
               task.createdByUserId === "me" &&
-              !claimedByRow
+              !claimedByRow &&
+              task.status === "Todo"
             const showTransferirAlterarInMenu =
               !meusChamadosPage && !historicoPage
             const showEncerrarInMenu =
-              !historicoPage && task.status !== "Canceled"
+              !historicoPage &&
+              (meusChamadosPage
+                ? task.status === "In Progress"
+                : task.status !== "Canceled")
+            const showReabrirChamadoMenu =
+              meusChamadosPage && task.status === "Canceled"
 
             const showRowActionsMenu =
               showTransferirAlterarInMenu ||
               showPegarInMenu ||
               showApagarMenu ||
-              showEncerrarInMenu
+              showEncerrarInMenu ||
+              showReabrirChamadoMenu
 
             return (
               <TableRow
@@ -1629,20 +1586,17 @@ export function AppointmentsTasks({
                             </DropdownMenuItem>
                           ) : null}
                           {showApagarMenu ? (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                variant="destructive"
-                                className="cursor-pointer"
-                                onClick={() => {
-                                  apagarTask(task.id)
-                                  toast.success("Chamado removido.")
-                                }}
-                              >
-                                <Trash2Icon />
-                                Apagar
-                              </DropdownMenuItem>
-                            </>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              className="cursor-pointer"
+                              onClick={() => {
+                                apagarTask(task.id)
+                                toast.success("Chamado removido.")
+                              }}
+                            >
+                              <Trash2Icon />
+                              Apagar
+                            </DropdownMenuItem>
                           ) : null}
                           {showEncerrarInMenu ? (
                             <>
@@ -1653,7 +1607,9 @@ export function AppointmentsTasks({
                                 variant="destructive"
                                 className="cursor-pointer"
                                 onClick={() => {
-                                  encerrarTask(task.id)
+                                  encerrarTask(task.id, {
+                                    peloSolicitante: meusChamadosPage,
+                                  })
                                   if (filaAtendimentosPage) {
                                     toast.success(
                                       "Chamado encerrado. Ele sai da fila e fica disponível em Histórico.",
@@ -1661,6 +1617,10 @@ export function AppointmentsTasks({
                                   } else if (meusAtendimentosPage) {
                                     toast.success(
                                       "Chamado encerrado. Ele sai de Meus atendimentos e fica em Histórico.",
+                                    )
+                                  } else if (meusChamadosPage) {
+                                    toast.success(
+                                      "Chamado encerrado. Ele permanece em Meus chamados.",
                                     )
                                   } else {
                                     toast.success(
@@ -1673,6 +1633,18 @@ export function AppointmentsTasks({
                                 Encerrar
                               </DropdownMenuItem>
                             </>
+                          ) : null}
+                          {showReabrirChamadoMenu ? (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => {
+                                reabrirTask(task.id)
+                                toast.success("Chamado reaberto.")
+                              }}
+                            >
+                              <RotateCcwIcon />
+                              Reabrir chamado
+                            </DropdownMenuItem>
                           ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>

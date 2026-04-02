@@ -168,3 +168,31 @@
   background: var(--scrollbar-tasks-thumb-hover);
   background-clip: padding-box;
 }
+
+/* Campo de digitação do chat: barra vertical fina (Firefox + WebKit) */
+.scrollbar-chat-composer {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-tasks-thumb) var(--scrollbar-tasks-track);
+}
+
+.scrollbar-chat-composer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-chat-composer::-webkit-scrollbar-track {
+  margin: 2px 0;
+  background: var(--scrollbar-tasks-track);
+  border-radius: 100px;
+}
+
+.scrollbar-chat-composer::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-tasks-thumb);
+  border-radius: 100px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-chat-composer::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-tasks-thumb-hover);
+  background-clip: padding-box;
+}
